@@ -231,6 +231,60 @@ return function (RouteBuilder $routes): void {
         ['prefix' => 'API', 'controller' => 'Api', 'action' => 'getDaysPresentForestal']
     );
 
+    $routes->connect(
+        '/API/getRodalesPresentForestal',
+        ['prefix' => 'API', 'controller' => 'Api', 'action' => 'getRodalesPresentForestal']
+    );
+
+    $routes->connect(
+        '/API/getEmpresasPresentForestal',
+        ['prefix' => 'API', 'controller' => 'Api', 'action' => 'getEmpresasPresentForestal']
+    );
+
+    $routes->connect(
+        '/API/getMetadataForQueryDataForestal',
+        ['prefix' => 'API', 'controller' => 'Api', 'action' => 'getMetadataForQueryDataForestal']
+    );
+
+    $routes->connect(
+        '/API/getDataExtraccionForestal',
+        ['prefix' => 'API', 'controller' => 'Api', 'action' => 'getDataExtraccionForestal']
+    );
+
+    $routes->connect(
+        '/API/getResumenProduccionByYears',
+        ['prefix' => 'API', 'controller' => 'Api', 'action' => 'getResumenProduccionByYears']
+    );
+
+    $routes->connect(
+        '/API/getResumenRodalDestinoMaterialForestal',
+        ['prefix' => 'API', 'controller' => 'Api', 'action' => 'getResumenRodalDestinoMaterialForestal']
+    );
+
+    $routes->connect(
+        '/API/getResumenProduccionByYearsByMaterial',
+        ['prefix' => 'API', 'controller' => 'Api', 'action' => 'getResumenProduccionByYearsByMaterial']
+    );
+
+
+    /*
+     * Metodos de Costos
+     */
+
+    $routes->connect(
+        '/API/getResumenCostosByQuery',
+        ['prefix' => 'API', 'controller' => 'Api', 'action' => 'getResumenCostosByQuery']
+    );
+
+    $routes->connect(
+        '/API/getResumenCostosByYearsByQuery',
+        ['prefix' => 'API', 'controller' => 'Api', 'action' => 'getResumenCostosByYearsByQuery']
+    );
+
+    $routes->connect(
+        '/API/getResumenCostosByYearsRodalesByQuery',
+        ['prefix' => 'API', 'controller' => 'Api', 'action' => 'getResumenCostosByYearsRodalesByQuery']
+    );
 
 
     /*

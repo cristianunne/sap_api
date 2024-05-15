@@ -59,6 +59,9 @@ use Cake\ORM\Entity;
  * @property string|null $circuito
  * @property int|null $idpuesto
  * @property string|null $fechaven
+ * @property string|null $objnr
+ * @property string|null $idempresa
+ * @property string|null $txtmaterial
  */
 class ZcForestalCompleto extends Entity
 {
@@ -123,5 +126,8 @@ class ZcForestalCompleto extends Entity
         'circuito' => true,
         'idpuesto' => true,
         'fechaven' => true,
+        'objnr' => true,
+        'idempresa' => true,
+        'txtmaterial' => true,
     ];
 }

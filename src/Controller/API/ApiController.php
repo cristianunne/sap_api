@@ -232,7 +232,7 @@ class ApiController extends AppController
         }
     }
 
-    private $number_page = 10000;
+    private $number_page = 5000;
 
     public function getMetadataForQueryData()
     {
@@ -293,6 +293,137 @@ class ApiController extends AppController
             ->toArray();
 
         return $this->json($data_costos);
+
+    }
+
+
+    public function getResumenCostosByQuery()
+    {
+
+        $data = $this->request->getData();
+
+        $empresa =  isset($data['filter']['empresa']) ? $data['filter']['empresa'] : null;
+        $rodales = isset($data['filter']['rodales']) ? $data['filter']['rodales'] : null;
+
+        $materiales = isset($data['filter']['materiales']) ? $data['filter']['materiales'] : null;
+        $elaborador = isset($data['filter']['elaborador']) ? $data['filter']['elaborador'] : null;
+        $chofer = isset($data['filter']['chofer']) ? $data['filter']['chofer'] : null;
+        $transportista = isset($data['filter']['transportista']) ? $data['filter']['transportista'] : null;
+        $comprador = isset($data['filter']['comprador']) ? $data['filter']['comprador'] : null;
+
+
+        $years = isset($data['filter']['years']) ? $data['filter']['years'] : null;
+
+
+        $conditions = $this->constructQuery($rodales, $years, null, null, $empresa);
+
+        $costos_completo_model = $this->getTableLocator()->get('ZcCostosCompleto');
+
+        //tengo la empresa, traigo los datos
+        $data_costos = $costos_completo_model->find('all',
+            [
+                'fields' => ['suma_imputado' => 'sum(dmbtr)', 'suma_unidades' => 'sum(mbgbtr)'],
+                'conditions' => $conditions
+            ]
+        ) ->toArray();
+
+        return $this->json($data_costos);
+
+
+    }
+
+    public function getResumenCostosByYearsByQuery()
+    {
+
+        $data = $this->request->getData();
+
+        $empresa =  isset($data['filter']['empresa']) ? $data['filter']['empresa'] : null;
+        $rodales = isset($data['filter']['rodales']) ? $data['filter']['rodales'] : null;
+
+        $materiales = isset($data['filter']['materiales']) ? $data['filter']['materiales'] : null;
+        $elaborador = isset($data['filter']['elaborador']) ? $data['filter']['elaborador'] : null;
+        $chofer = isset($data['filter']['chofer']) ? $data['filter']['chofer'] : null;
+        $transportista = isset($data['filter']['transportista']) ? $data['filter']['transportista'] : null;
+        $comprador = isset($data['filter']['comprador']) ? $data['filter']['comprador'] : null;
+
+
+        $years = isset($data['filter']['years']) ? $data['filter']['years'] : null;
+
+
+        $conditions = $this->constructQuery($rodales, $years, null, null, $empresa);
+
+        $costos_completo_model = $this->getTableLocator()->get('ZcCostosCompleto');
+
+        //tengo la empresa, traigo los datos
+        $data_costos = $costos_completo_model->find('all',
+            [
+                'fields' => ['year' => 'gjahr' ,'suma_imputado' => 'sum(dmbtr)', 'suma_unidades' => 'sum(mbgbtr)'],
+                'conditions' => $conditions
+            ]
+        )
+            ->group(['gjahr'])
+            ->order(['gjahr ASC'])
+            ->toArray();
+
+        return $this->json($data_costos);
+
+    }
+
+    public function getResumenCostosByYearsRodalesByQuery()
+    {
+
+        $data = $this->request->getData();
+
+        $empresa =  isset($data['filter']['empresa']) ? $data['filter']['empresa'] : null;
+        $rodales = isset($data['filter']['rodales']) ? $data['filter']['rodales'] : null;
+
+        $materiales = isset($data['filter']['materiales']) ? $data['filter']['materiales'] : null;
+        $elaborador = isset($data['filter']['elaborador']) ? $data['filter']['elaborador'] : null;
+        $chofer = isset($data['filter']['chofer']) ? $data['filter']['chofer'] : null;
+        $transportista = isset($data['filter']['transportista']) ? $data['filter']['transportista'] : null;
+        $comprador = isset($data['filter']['comprador']) ? $data['filter']['comprador'] : null;
+
+
+        $years = isset($data['filter']['years']) ? $data['filter']['years'] : null;
+
+
+        $conditions = $this->constructQuery($rodales, $years, null, null, $empresa);
+
+        $costos_completo_model = $this->getTableLocator()->get('ZcCostosCompleto');
+
+        //TRAIGO LOS YEARS AGRUPADOS DISTINCT
+        $years_data = $costos_completo_model->find('all',
+            [
+                'fields' => ['year' => 'gjahr'],
+                'conditions' => $conditions
+            ]
+        )->distinct(['gjahr'])->toArray();
+
+
+        $rodales_data = $costos_completo_model->find('all',
+            [
+                'fields' => ['rodal' => 'rodal'],
+                'conditions' => $conditions
+            ]
+        )->distinct(['rodal'])->toArray();
+
+
+        //tengo la empresa, traigo los datos
+        $data_costos = $costos_completo_model->find('all',
+            [
+                'fields' => ['rodal' => 'rodal', 'year' => 'gjahr' ,'suma_imputado' => 'sum(dmbtr)', 'suma_unidades' => 'sum(mbgbtr)'],
+                'conditions' => $conditions
+            ]
+        )
+            ->group(['rodal', 'gjahr'])
+            ->order(['gjahr ASC'])
+            ->toArray();
+
+        $data_completo['years'] = $years_data;
+        $data_completo['rodales'] = $rodales_data;
+        $data_completo['costos'] = $data_costos;
+
+        return $this->json([$data_completo]);
 
     }
 
@@ -406,6 +537,7 @@ class ApiController extends AppController
         $materiales_model = $this->getTableLocator()->get('ZcTxtMateriales');
 
         $materiales = $materiales_model->find('all', [])
+            ->where(['mandt' => '500'])
             ->order('maktg ASC')
             ->toArray();
 
@@ -419,7 +551,7 @@ class ApiController extends AppController
 
 
 
-    private function constructQuery($rodales, $years, $months, $materiales = null)
+    private function constructQuery($rodales, $years, $months, $materiales = null, $idempresa = null)
     {
         $options = [];
 
@@ -435,6 +567,10 @@ class ApiController extends AppController
 
         if(!empty($materiales)){
             $options['matnr IN'] = $materiales;
+        }
+
+        if(!empty($idempresa)){
+            $options['idempresa IN'] = $idempresa;
         }
 
         return $options;
@@ -551,6 +687,8 @@ class ApiController extends AppController
 
         //capturo las variables de filtro
         $data = $this->request->getData();
+
+        $empresa =  isset($data['filter']['empresa']) ? $data['filter']['empresa'] : null;
         $rodales =  isset($data['filter']['rodales']) ? $data['filter']['rodales'] : null;
         $materiales = isset($data['filter']['materiales']) ? $data['filter']['materiales'] : null;
         $elaborador = isset($data['filter']['elaborador']) ? $data['filter']['elaborador'] : null;
@@ -558,8 +696,11 @@ class ApiController extends AppController
         $transportista = isset($data['filter']['transportista']) ? $data['filter']['transportista'] : null;
         $comprador = isset($data['filter']['comprador']) ? $data['filter']['comprador'] : null;
 
-        $conditions = $this->constructQueryForestal($rodales, $materiales, $elaborador, $chofer, $transportista, $comprador,
+
+        $conditions = $this->constructQueryForestal($empresa, $rodales, $materiales, $elaborador, $chofer, $transportista, $comprador,
         null, null, null);
+
+
 
         //taigoel modelo
         $zc_forestal_completo_model = $this->getTableLocator()->get('ZcForestalCompleto');
@@ -586,6 +727,8 @@ class ApiController extends AppController
 
         //capturo las variables de filtro
         $data = $this->request->getData();
+
+        $empresa =  isset($data['filter']['empresa']) ? $data['filter']['empresa'] : null;
         $rodales = isset($data['filter']['rodales']) ? $data['filter']['rodales'] : null;
         $materiales = isset($data['filter']['materiales']) ? $data['filter']['materiales'] : null;
         $elaborador = isset($data['filter']['elaborador']) ? $data['filter']['elaborador'] : null;
@@ -595,8 +738,10 @@ class ApiController extends AppController
 
         $years = isset($data['filter']['years']) ? $data['filter']['years'] : null;
 
-        $conditions = $this->constructQueryForestal($rodales, $materiales, $elaborador, $chofer, $transportista, $comprador,
+        $conditions = $this->constructQueryForestal($empresa, $rodales, $materiales, $elaborador, $chofer, $transportista, $comprador,
             $years, null,null);
+
+
 
         //taigoel modelo
         $zc_forestal_completo_model = $this->getTableLocator()->get('ZcForestalCompleto');
@@ -617,6 +762,8 @@ class ApiController extends AppController
 
         //capturo las variables de filtro
         $data = $this->request->getData();
+
+        $empresa =  isset($data['filter']['empresa']) ? $data['filter']['empresa'] : null;
         $rodales = isset($data['filter']['rodales']) ? $data['filter']['rodales'] : null;
         $materiales = isset($data['filter']['materiales']) ? $data['filter']['materiales'] : null;
         $elaborador = isset($data['filter']['elaborador']) ? $data['filter']['elaborador'] : null;
@@ -626,7 +773,7 @@ class ApiController extends AppController
 
         $years = isset($data['filter']['years']) ? $data['filter']['years'] : null;
 
-        $conditions = $this->constructQueryForestal($rodales, $materiales, $elaborador, $chofer, $transportista, $comprador,
+        $conditions = $this->constructQueryForestal($empresa, $rodales, $materiales, $elaborador, $chofer, $transportista, $comprador,
         $years, null, null);
 
         //taigoel modelo
@@ -636,6 +783,7 @@ class ApiController extends AppController
             'conditions' => $conditions,
             'fields' => ['idelaborador']
         ])
+            ->where(['idelaborador NOT like' => ''])
             ->distinct(['idelaborador'])
             ->toArray();
 
@@ -649,6 +797,8 @@ class ApiController extends AppController
 
         //capturo las variables de filtro
         $data = $this->request->getData();
+
+        $empresa =  isset($data['filter']['empresa']) ? $data['filter']['empresa'] : null;
         $rodales = isset($data['filter']['rodales']) ? $data['filter']['rodales'] : null;
         $materiales = isset($data['filter']['materiales']) ? $data['filter']['materiales'] : null;
         $elaborador = isset($data['filter']['elaborador']) ? $data['filter']['elaborador'] : null;
@@ -658,7 +808,7 @@ class ApiController extends AppController
 
         $years = isset($data['filter']['years']) ? $data['filter']['years'] : null;
 
-        $conditions = $this->constructQueryForestal($rodales, $materiales, $elaborador, $chofer, $transportista, $comprador,
+        $conditions = $this->constructQueryForestal($empresa, $rodales, $materiales, $elaborador, $chofer, $transportista, $comprador,
         $years, null, null);
 
         //taigoel modelo
@@ -680,6 +830,8 @@ class ApiController extends AppController
 
         //capturo las variables de filtro
         $data = $this->request->getData();
+
+        $empresa =  isset($data['filter']['empresa']) ? $data['filter']['empresa'] : null;
         $rodales = isset($data['filter']['rodales']) ? $data['filter']['rodales'] : null;
         $materiales = isset($data['filter']['materiales']) ? $data['filter']['materiales'] : null;
         $elaborador = isset($data['filter']['elaborador']) ? $data['filter']['elaborador'] : null;
@@ -689,7 +841,7 @@ class ApiController extends AppController
 
         $years = isset($data['filter']['years']) ? $data['filter']['years'] : null;
 
-        $conditions = $this->constructQueryForestal($rodales, $materiales, $elaborador, $chofer, $transportista, $comprador,
+        $conditions = $this->constructQueryForestal($empresa, $rodales, $materiales, $elaborador, $chofer, $transportista, $comprador,
         $years, null, null);
 
         //taigoel modelo
@@ -711,6 +863,8 @@ class ApiController extends AppController
 
         //capturo las variables de filtro
         $data = $this->request->getData();
+
+        $empresa =  isset($data['filter']['empresa']) ? $data['filter']['empresa'] : null;
         $rodales = isset($data['filter']['rodales']) ? $data['filter']['rodales'] : null;
         $materiales = isset($data['filter']['materiales']) ? $data['filter']['materiales'] : null;
         $elaborador = isset($data['filter']['elaborador']) ? $data['filter']['elaborador'] : null;
@@ -720,7 +874,7 @@ class ApiController extends AppController
 
         $years = isset($data['filter']['years']) ? $data['filter']['years'] : null;
 
-        $conditions = $this->constructQueryForestal($rodales, $materiales, $elaborador, $chofer, $transportista, $comprador,
+        $conditions = $this->constructQueryForestal($empresa, $rodales, $materiales, $elaborador, $chofer, $transportista, $comprador,
         $years, null, null);
 
         //taigoel modelo
@@ -742,6 +896,8 @@ class ApiController extends AppController
 
         //capturo las variables de filtro
         $data = $this->request->getData();
+
+        $empresa =  isset($data['filter']['empresa']) ? $data['filter']['empresa'] : null;
         $rodales = isset($data['filter']['rodales']) ? $data['filter']['rodales'] : null;
         $materiales = isset($data['filter']['materiales']) ? $data['filter']['materiales'] : null;
         $elaborador = isset($data['filter']['elaborador']) ? $data['filter']['elaborador'] : null;
@@ -751,7 +907,7 @@ class ApiController extends AppController
 
         $years = isset($data['filter']['years']) ? $data['filter']['years'] : null;
 
-        $conditions = $this->constructQueryForestal($rodales, $materiales, $elaborador, $chofer, $transportista, $comprador,
+        $conditions = $this->constructQueryForestal($empresa, $rodales, $materiales, $elaborador, $chofer, $transportista, $comprador,
             $years, null, null);
 
         //taigoel modelo
@@ -773,6 +929,8 @@ class ApiController extends AppController
 
         //capturo las variables de filtro
         $data = $this->request->getData();
+
+        $empresa =  isset($data['filter']['empresa']) ? $data['filter']['empresa'] : null;
         $rodales = isset($data['filter']['rodales']) ? $data['filter']['rodales'] : null;
         $materiales = isset($data['filter']['materiales']) ? $data['filter']['materiales'] : null;
         $elaborador = isset($data['filter']['elaborador']) ? $data['filter']['elaborador'] : null;
@@ -783,7 +941,7 @@ class ApiController extends AppController
         $years = isset($data['filter']['years']) ? $data['filter']['years'] : null;
         $months = isset($data['filter']['months']) ? $data['filter']['months'] : null;
 
-        $conditions = $this->constructQueryForestal($rodales, $materiales, $elaborador, $chofer, $transportista, $comprador,
+        $conditions = $this->constructQueryForestal($empresa, $rodales, $materiales, $elaborador, $chofer, $transportista, $comprador,
             $years, $months, null);
 
         //taigoel modelo
@@ -800,10 +958,389 @@ class ApiController extends AppController
         return $this->json($day_present);
 
     }
-    private function constructQueryForestal($rodales, $materiales, $elaborador, $chofer, $transportista, $comprador, $years, $months, $days)
+
+    public function getRodalesPresentForestal() {
+
+        //capturo las variables de filtro
+        $data = $this->request->getData();
+
+        $empresa =  isset($data['filter']['empresa']) ? $data['filter']['empresa'] : null;
+        $rodales = isset($data['filter']['rodales']) ? $data['filter']['rodales'] : null;
+        $materiales = isset($data['filter']['materiales']) ? $data['filter']['materiales'] : null;
+        $elaborador = isset($data['filter']['elaborador']) ? $data['filter']['elaborador'] : null;
+        $chofer = isset($data['filter']['chofer']) ? $data['filter']['chofer'] : null;
+        $transportista = isset($data['filter']['transportista']) ? $data['filter']['transportista'] : null;
+        $comprador = isset($data['filter']['comprador']) ? $data['filter']['comprador'] : null;
+
+        $years = isset($data['filter']['years']) ? $data['filter']['years'] : null;
+
+
+
+        $conditions = $this->constructQueryForestal($empresa, $rodales, $materiales, $elaborador, $chofer, $transportista, $comprador,
+            $years, null, null);
+
+        //taigoel modelo
+        $zc_forestal_completo_model = $this->getTableLocator()->get('ZcForestalCompleto');
+
+        $trans_present = $zc_forestal_completo_model->find('all', [
+            'conditions' => $conditions,
+            'fields' => ['rodal']
+        ])
+            ->distinct(['rodal'])
+            ->toArray();
+
+
+        return $this->json($trans_present);
+
+    }
+
+    public function getEmpresasPresentForestal() {
+
+        //capturo las variables de filtro
+        $data = $this->request->getData();
+
+        $empresa =  isset($data['filter']['empresa']) ? $data['filter']['empresa'] : null;
+        $rodales = isset($data['filter']['rodales']) ? $data['filter']['rodales'] : null;
+        $materiales = isset($data['filter']['materiales']) ? $data['filter']['materiales'] : null;
+        $elaborador = isset($data['filter']['elaborador']) ? $data['filter']['elaborador'] : null;
+        $chofer = isset($data['filter']['chofer']) ? $data['filter']['chofer'] : null;
+        $transportista = isset($data['filter']['transportista']) ? $data['filter']['transportista'] : null;
+        $comprador = isset($data['filter']['comprador']) ? $data['filter']['comprador'] : null;
+
+        $years = isset($data['filter']['years']) ? $data['filter']['years'] : null;
+
+
+
+        $conditions = $this->constructQueryForestal($empresa, $rodales, $materiales, $elaborador, $chofer, $transportista, $comprador,
+            $years, null, null);
+
+        //taigoel modelo
+        $zc_forestal_completo_model = $this->getTableLocator()->get('ZcForestalCompleto');
+
+        $trans_present = $zc_forestal_completo_model->find('all', [
+            'conditions' => $conditions,
+            'fields' => ['idempresa']
+        ])
+            ->distinct(['idempresa'])
+            ->toArray();
+
+
+        return $this->json($trans_present);
+
+    }
+
+
+    public function getMetadataForQueryDataForestal()
+    {
+        $zc_forestal_completo_model = $this->getTableLocator()->get('ZcForestalCompleto');
+
+        $data = $this->request->getData();
+
+        $empresa =  isset($data['filter']['empresa']) ? $data['filter']['empresa'] : null;
+        $rodales = isset($data['filter']['rodales']) ? $data['filter']['rodales'] : null;
+        $materiales = isset($data['filter']['materiales']) ? $data['filter']['materiales'] : null;
+        $elaborador = isset($data['filter']['elaborador']) ? $data['filter']['elaborador'] : null;
+        $chofer = isset($data['filter']['chofer']) ? $data['filter']['chofer'] : null;
+        $transportista = isset($data['filter']['transportista']) ? $data['filter']['transportista'] : null;
+        $comprador = isset($data['filter']['comprador']) ? $data['filter']['comprador'] : null;
+
+        $years = isset($data['filter']['years']) ? $data['filter']['years'] : null;
+        $months = isset($data['filter']['months']) ? $data['filter']['months'] : null;
+        $days = isset($data['filter']['days']) ? $data['filter']['days'] : null;
+
+
+
+        $conditions = $this->constructQueryForestal($empresa, $rodales, $materiales, $elaborador, $chofer, $transportista, $comprador,
+            $years, $months, $days);
+
+        $cantidad_data = $zc_forestal_completo_model->find('all',
+            [
+                'fields' => ['cantidad' => 'count(*)'],
+                'conditions' => $conditions
+            ]
+        )->first();
+
+        //Calculo las paginas utilizando un number page de 5000
+        $cantidad = intval($cantidad_data->cantidad);
+        $resto_mod = $cantidad % $this->number_page;
+        $cantidad_sin_mod = $cantidad - $resto_mod;
+        $number_pages = $resto_mod != 0 ? ($cantidad_sin_mod / $this->number_page) + 1 : ($cantidad_sin_mod / $this->number_page);
+
+        //le voy a agregar el resumen de los costo
+
+        $sum_costo = $zc_forestal_completo_model->find('all',
+            [
+                'fields' => ['sum_costo_elab' => 'sum(costoelab)', 'sum_costo_trans' => 'sum(costotrans)', 'toneladas' => 'sum(cantidad)'],
+                'conditions' => $conditions
+            ]
+        )->first();
+
+
+
+
+        $array_res = [
+            'cantidad' => $cantidad,
+            'pages' => $number_pages,
+            'sum_costo_elab' => $sum_costo->sum_costo_elab,
+            'sum_costo_trans' => $sum_costo->sum_costo_trans,
+            'toneladas' => $sum_costo->toneladas
+        ];
+
+        return $this->json($array_res);
+
+    }
+
+
+    public function getDataExtraccionForestal()
+    {
+        $zc_forestal_completo_model = $this->getTableLocator()->get('ZcForestalCompleto');
+
+        $data = $this->request->getData();
+
+        $empresa =  isset($data['filter']['empresa']) ? $data['filter']['empresa'] : null;
+        $rodales = isset($data['filter']['rodales']) ? $data['filter']['rodales'] : null;
+        $materiales = isset($data['filter']['materiales']) ? $data['filter']['materiales'] : null;
+        $elaborador = isset($data['filter']['elaborador']) ? $data['filter']['elaborador'] : null;
+        $chofer = isset($data['filter']['chofer']) ? $data['filter']['chofer'] : null;
+        $transportista = isset($data['filter']['transportista']) ? $data['filter']['transportista'] : null;
+        $comprador = isset($data['filter']['comprador']) ? $data['filter']['comprador'] : null;
+
+        $years = isset($data['filter']['years']) ? $data['filter']['years'] : null;
+        $months = isset($data['filter']['months']) ? $data['filter']['months'] : null;
+        $days = isset($data['filter']['days']) ? $data['filter']['days'] : null;
+
+        $pagina = $data['filter']['page'];
+        //$pagina = -1;
+
+
+
+        $limite_sup = $pagina *  $this->number_page;
+        $limite_inferior = $limite_sup - $this->number_page;
+
+
+
+        $conditions = $this->constructQueryForestal($empresa, $rodales, $materiales, $elaborador, $chofer, $transportista, $comprador,
+            $years, $months, $days);
+
+        if($pagina != -1){
+            $array_res = $zc_forestal_completo_model->find('all',
+                [
+                    'conditions' => $conditions
+                ]
+            )
+                ->limit($this->number_page)
+                ->offset($limite_inferior)
+                ->toArray();
+        } else {
+
+            $array_res = $zc_forestal_completo_model->find('all',
+                [
+                    'conditions' => $conditions
+                ]
+            )
+                ->toArray();
+        }
+
+        //Calculo las paginas utilizando un number page de 5000
+
+        return $this->json($array_res);
+
+    }
+
+
+    public function getResumenRodalDestinoMaterialForestal()
+    {
+
+        $costos_completo_model = $this->getTableLocator()->get('ZcForestalCompleto');
+        $data = $this->request->getData();
+
+        $empresa =  isset($data['filter']['empresa']) ? $data['filter']['empresa'] : null;
+        $rodales = isset($data['filter']['rodales']) ? $data['filter']['rodales'] : null;
+        $materiales = isset($data['filter']['materiales']) ? $data['filter']['materiales'] : null;
+        $elaborador = isset($data['filter']['elaborador']) ? $data['filter']['elaborador'] : null;
+        $chofer = isset($data['filter']['chofer']) ? $data['filter']['chofer'] : null;
+        $transportista = isset($data['filter']['transportista']) ? $data['filter']['transportista'] : null;
+        $comprador = isset($data['filter']['comprador']) ? $data['filter']['comprador'] : null;
+
+        $years = isset($data['filter']['years']) ? $data['filter']['years'] : null;
+        $months = isset($data['filter']['months']) ? $data['filter']['months'] : null;
+        $days = isset($data['filter']['days']) ? $data['filter']['days'] : null;
+
+        $conditions = $this->constructQueryForestal($empresa, $rodales, $materiales, $elaborador, $chofer, $transportista, $comprador,
+            $years, $months, $days);
+
+
+        $data_costos = $costos_completo_model->find('all',
+            [
+                'fields' => ['rodal' => 'rodal', 'comprador' => 'comprador', 'material' => 'material', 'txtmaterial' => 'txtmaterial',
+                    'suma' => 'sum(cantidad)', 'costoelab' => 'sum(costoelab)', 'costotrans' => 'sum(costotrans)'],
+                'conditions' => $conditions
+            ]
+        )
+            ->group(['rodal', 'comprador', 'material', 'txtmaterial'])
+            ->order(['rodal ASC'])
+
+            ->toArray();
+
+        return $this->json($data_costos);
+
+
+    }
+
+
+    public function getResumenProduccionByYears()
+    {
+
+        $costos_completo_model = $this->getTableLocator()->get('ZcForestalCompleto');
+
+        $data = $this->request->getData();
+
+
+        $empresa =  isset($data['filter']['empresa']) ? $data['filter']['empresa'] : null;
+        $rodales = isset($data['filter']['rodales']) ? $data['filter']['rodales'] : null;
+        $materiales = isset($data['filter']['materiales']) ? $data['filter']['materiales'] : null;
+        $elaborador = isset($data['filter']['elaborador']) ? $data['filter']['elaborador'] : null;
+        $chofer = isset($data['filter']['chofer']) ? $data['filter']['chofer'] : null;
+        $transportista = isset($data['filter']['transportista']) ? $data['filter']['transportista'] : null;
+        $comprador = isset($data['filter']['comprador']) ? $data['filter']['comprador'] : null;
+
+        $years = isset($data['filter']['years']) ? $data['filter']['years'] : null;
+
+        $conditions = $this->constructQueryForestal($empresa, $rodales, $materiales, $elaborador, $chofer, $transportista, $comprador,
+            $years, null, null);
+
+
+        $data_costos = $costos_completo_model->find('all',
+            [
+                'fields' => ['year' => 'year', 'produccion' => 'sum(cantidad)'],
+                'conditions' => $conditions
+            ]
+        )
+            ->group(['year'])
+            ->order(['year ASC'])
+
+            ->toArray();
+
+        return $this->json($data_costos);
+
+
+    }
+
+    public function getResumenProduccionByYearsByMaterial()
+    {
+
+        $costos_completo_model = $this->getTableLocator()->get('ZcForestalCompleto');
+
+        $data = $this->request->getData();
+
+        $empresa =  isset($data['filter']['empresa']) ? $data['filter']['empresa'] : null;
+        $rodales = isset($data['filter']['rodales']) ? $data['filter']['rodales'] : null;
+        $materiales = isset($data['filter']['materiales']) ? $data['filter']['materiales'] : null;
+        $elaborador = isset($data['filter']['elaborador']) ? $data['filter']['elaborador'] : null;
+        $chofer = isset($data['filter']['chofer']) ? $data['filter']['chofer'] : null;
+        $transportista = isset($data['filter']['transportista']) ? $data['filter']['transportista'] : null;
+        $comprador = isset($data['filter']['comprador']) ? $data['filter']['comprador'] : null;
+
+        $years = isset($data['filter']['years']) ? $data['filter']['years'] : null;
+        $months = isset($data['filter']['months']) ? $data['filter']['months'] : null;
+        $days = isset($data['filter']['days']) ? $data['filter']['days'] : null;
+
+        $conditions = $this->constructQueryForestal($empresa, $rodales, $materiales, $elaborador, $chofer, $transportista, $comprador,
+            $years, null, null);
+
+        $data_material = $costos_completo_model->find('all',
+            [
+                'fields' => ['material' => ' material', 'txtmaterial' => 'txtmaterial'],
+                'conditions' => $conditions
+            ]
+        )
+            ->distinct(['material']);
+
+        $data_years = $costos_completo_model->find('all',
+            [
+                'fields' => ['year' => ' year'],
+                'conditions' => $conditions
+            ]
+        )
+            ->distinct(['year'])->toArray();
+
+        asort($data_years);
+
+
+        $data_costos = $costos_completo_model->find('all',
+            [
+                'fields' => ['material' => ' material', 'txtmaterial' => 'txtmaterial', 'year' => 'year', 'produccion' => 'sum(cantidad)'],
+                'conditions' => $conditions
+            ]
+        )
+            ->group(['material', 'txtmaterial', 'year'])
+            ->order(['material, year ASC']);
+
+        $array_data = [];
+        $array_years_present = [];
+
+        $data_completo = [];
+
+        //cargo los years present
+        foreach ($data_years as $year) {
+            $array_years_present[] = $year;
+        }
+
+        foreach ($data_material as $material) {
+            $arr_year = array();
+            foreach ($data_years as $year){
+                $valor_ye = 0;
+                foreach ($data_costos as $data_prod) {
+
+                    if($material->material == $data_prod->material && $year->year == $data_prod->year){
+                        $valor_ye = $data_prod->produccion;
+                    }
+                }
+                $arr_year[$year->year] = $valor_ye;
+            }
+            $array_data[] = [
+                'material' => $material->material,
+                'txtmaterial' => $material->txtmaterial,
+                'data' => $arr_year
+            ];
+        }
+
+        $data_completo = [
+            'years' => $array_years_present,
+            'data' => $array_data
+            ];
+
+        //debug($data_years);
+
+        //ebug($array_data);
+
+        //return $this->json($array_years_present);
+        return $this->json($data_completo);
+
+        /*$data_costos = $costos_completo_model->find('all',
+            [
+                'fields' => ['material' => ' material', 'txtmaterial' => 'txtmaterial', 'year' => 'year', 'produccion' => 'sum(cantidad)'],
+                'conditions' => $conditions
+            ]
+        )
+            ->group(['material', 'txtmaterial', 'year'])
+            ->order(['year ASC'])
+
+            ->toArray();
+
+        return $this->json($data_costos);*/
+
+
+    }
+
+
+    private function constructQueryForestal($empresa, $rodales, $materiales, $elaborador, $chofer, $transportista, $comprador, $years, $months, $days)
     {
         $options = [];
 
+        if(!empty($empresa)){
+            $options['idempresa IN'] = $empresa;
+        }
         if(!empty($rodales)){
             $options['rodal IN'] = $rodales;
         }

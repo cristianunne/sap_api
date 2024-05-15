@@ -297,6 +297,21 @@ class ZcForestalCompletoTable extends Table
             ->maxLength('fechaven', 100)
             ->allowEmptyString('fechaven');
 
+        $validator
+            ->scalar('objnr')
+            ->maxLength('objnr', 100)
+            ->allowEmptyString('objnr');
+
+        $validator
+            ->scalar('idempresa')
+            ->maxLength('idempresa', 100)
+            ->allowEmptyString('idempresa');
+
+        $validator
+            ->scalar('txtmaterial')
+            ->maxLength('txtmaterial', 100)
+            ->allowEmptyString('txtmaterial');
+
         return $validator;
     }
 }

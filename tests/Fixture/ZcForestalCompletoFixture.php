@@ -76,6 +76,9 @@ class ZcForestalCompletoFixture extends TestFixture
                 'circuito' => 'Lorem ipsum dolor sit amet',
                 'idpuesto' => 1,
                 'fechaven' => 'Lorem ipsum dolor sit amet',
+                'objnr' => 'Lorem ipsum dolor sit amet',
+                'idempresa' => 'Lorem ipsum dolor sit amet',
+                'txtmaterial' => 'Lorem ipsum dolor sit amet',
             ],
         ];
         parent::init();
